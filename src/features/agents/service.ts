@@ -315,7 +315,7 @@ export type AgentViewProps<Config = unknown> = {
  * starting config, from `defaults`, to fill in. The app owns its key, name and
  * picture around it. */
 export type AgentCreateProps<Config = unknown> = {
-  /** Existing cards supply their membership and scoped settings action. */
+  /** Existing agent when editing saved config or rendering a library card. */
   agent?: Agent<Config>;
   openSettings?: () => void;
   /** Model fields may use the compact card treatment in the library. */
@@ -799,6 +799,8 @@ export type AgentType<Config = unknown> = {
   ProfileActions?: ComponentType<{ children: ReactNode }>;
   /** Compact model field for creation and library cards; the type owns discovery and configuration. */
   CreateModel?: ComponentType<AgentCreateProps<Config>>;
+  /** Compact Thinking control for creation; the type owns its values and default representation. */
+  CreateThinking?: ComponentType<AgentCreateProps<Config>>;
   /** Device-wide readiness and management. Agents supplies the menu row,
    * provider identity, modal framing and focus behavior. */
   provider?: AgentProvider;
@@ -2811,7 +2813,52 @@ export class AgentsService extends Service implements Agents {
           });
           return (message) => {
             check();
-            return respondExternal(client, message, connected, scopes);
+            return respondExternal(
+              client,
+              message,
+              connected,
+              scopes,
+              async () => {
+                check();
+                if (!session.mainAgent)
+                  throw new Error(
+                    "Your saved Bestie is unavailable in this copy of Buzz.",
+                  );
+                let worker: string | null | undefined;
+                try {
+                  worker = await session.mainAgent.read();
+                } catch {
+                  check();
+                  throw new Error(
+                    "Your saved Bestie could not be read. Check the community connection and try again.",
+                  );
+                }
+                check();
+                if (!worker || !/^[0-9a-f]{64}$/.test(worker))
+                  throw new Error(
+                    "Choose and save a Bestie in Buzz, then try again.",
+                  );
+                const unavailable =
+                  "Your saved Bestie could not be checked. Check the community connection and try again.";
+                try {
+                  await session.agentChoices.refresh(true, { fresh: true });
+                } catch {
+                  check();
+                  throw new Error(unavailable);
+                }
+                check();
+                const choices = session.agentChoices.snapshot();
+                if (
+                  !choices.selectable.some((agent) => agent.pubkey === worker)
+                )
+                  throw new Error(
+                    choices.complete
+                      ? "Your saved Bestie is not available in this community. Choose another in Buzz, then try again."
+                      : unavailable,
+                  );
+                return worker;
+              },
+            );
           };
         },
         lifetime,

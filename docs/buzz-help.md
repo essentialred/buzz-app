@@ -76,7 +76,8 @@ the interface unless an available tool actually supports that action.
   identity alone does not grant membership. The same identity can be used in
   more than one community.
 - Set or clear your status from the profile menu, or with **Update status** /
-  **Set a status** on your own profile.
+  **Set a status** on your own profile. On a profile or in the profile menu,
+  hover the status emoji to see its `:name:`.
 - Where a community verifies names, the profile check appears beside the verified
   full name, or the verified username when no full name is supplied. The profile
   shows the issuer and verification time; cached verification has no check.
@@ -105,6 +106,11 @@ app again. Never put connection credentials in a chat or file.
 An app can discover tools that need more access. Start its access request and
 approve the requested scopes in Buzz. After approval, make the tool call again.
 Each approval replaces prior access. Request all access the app still needs.
+Creating Solo chats needs create access. An app can request it with read and
+post in one approval; existing read/post access never gains it without your
+approval. Buzz includes you, the selected agent and your saved Bestie
+automatically. Choose and save an available Bestie in this community first; the
+external app cannot choose other members or make the chat public.
 External posts use the selected agent's identity. Replies and mentions reach
 that agent in Buzz; they do not notify the external app through this connection.
 
@@ -121,8 +127,13 @@ that agent in Buzz; they do not notify the external app through this connection.
 - Long message bubbles use the available conversation width, stopping 32px
   before the opposite speaker’s avatar column. Short messages hug their text.
 - Hover over a message to reveal the capsule above it: add a reaction, reply,
-  copy its link, or open More. **Copy message** is in More. Keyboard focus also
-  reveals these actions; touch layouts keep actions inline.
+  copy its link, forward it, or open More. **Copy message** is in More. Keyboard
+  focus also reveals these actions; touch layouts keep actions inline.
+- **Forward message** in a message's hover actions or message menu sends its link
+  to one person in the current community, with an optional note. Buzz opens or
+  creates the direct message for you. The link previews the original message;
+  the recipient still needs access to its conversation. Forwarding is unavailable
+  when the connection cannot start DMs or the message has no link yet.
 
 - Only explicit additions by another member and removals appear as centered
   channel notices; self-joins and voluntary leaves are hidden.
@@ -179,6 +190,12 @@ that agent in Buzz; they do not notify the external app through this connection.
   you're in. Opening an unjoined channel shows a preview with **Join**. Private
   channels appear only once someone adds you. Search reopens where you left it
   for a few minutes; Escape starts fresh next time.
+- **Jumping to unread**: opening search (⌘T or ⌘K; Ctrl elsewhere) with
+  nothing typed lists up to six of your other unread channels and DMs first,
+  most recently active first, and selects the first, so Enter opens it, instead
+  of reopening where you left it. Muted
+  conversations are left out. Turn this off with **Show unread first in
+  search** in Settings → Appearance → Conversations.
 - **Mute** is available from a channel or DM's sidebar context menu. Once
   confirmed, a crossed-out bell appears immediately after its name. New messages
   do not make muted channel or DM names bold.
@@ -384,11 +401,15 @@ available rather than silently discarding it.
   open an agent there and use **Identity → Instructions**. Opening its avatar or
   name in a conversation shows its profile, where **Settings → Instructions**
   offers the same edit. Model, workspace, and other runtime options depend on
-  its type. Do not assume someone can edit another person's agent.
+  its type. Where offered, **Create agent** also lets people choose Thinking
+  before the first config is saved; **Default** follows the provider's setting.
+  Do not assume someone can edit another person's agent.
 - A desktop plugin can run native Codex or Claude on another computer. The plugin manages the target, workspace, credentials, and expiry. A saved
   remote choice stays remote after an app restart. If the target cannot be
   restored, Buzz shows an error and requires a new session.
   The model control on a remote agent card opens that agent's Settings.
+  In Codex update reviews, its Thinking choice is read-only instead of using
+  this computer's options.
   Remote Claude uses the Claude sign-in on the target. It keeps each saved
   conversation in that target's workspace. Stop ends its active turn.
   Remote Claude usage totals and transcripts are unavailable.
@@ -504,6 +525,10 @@ confirmation.
   macOS (inside the app's installed name, such as `Buzz Foundation.app`), with
   no setup or token. Without such a plugin there are no tools to
   offer; do not promise them.
+- **Settings → Plugins → GitHub → Links → Open GitHub links in Buzz** controls
+  whether supported GitHub links and the linked-PR shortcut open in a side
+  panel or your browser. It starts on and is saved on this device across all
+  communities. Turning it off keeps pull request indicators and agent tools enabled.
 - The **GitHub** plugin’s pull request panel offers **Queue for merge** when
   the target branch requires a merge queue. After confirmation, it queues the
   displayed commit and shows **Queued for merge**; GitHub controls when it merges.

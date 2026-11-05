@@ -105,6 +105,7 @@ export const apply: PluginModule["apply"] = (ctx) => {
   const {
     Create,
     CreateModel,
+    CreateThinking,
     DefaultControl,
     ProviderDialogBody,
     SettingsTab,
@@ -127,6 +128,7 @@ export const apply: PluginModule["apply"] = (ctx) => {
     defaults: () => ({ config: DEFAULT_CONFIG }),
     Create,
     CreateModel,
+    CreateThinking,
     importShared: (source) =>
       source.runtime === "claude" &&
       (!source.provider || source.provider === "anthropic")
