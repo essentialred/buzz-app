@@ -169,10 +169,13 @@ that agent in Buzz; they do not notify the external app through this connection.
   Folders are optional unless **Work in a new worktree** is on. In that mode,
   add at least one project folder; the form shows a message beside Folders
   until you add one or turn worktree mode off.
-- **Inbox** collects DMs, ordinary responses in Solo chats, mentions of you, and replies in threads you started,
-  replied in, or follow. Solo chats appear under All, not DMs; their nested threads stay separate. Agent-only
-  coordination stays out. If loading fails, use **Retry inbox** on the page or
-  preview to retry; recovered activity clears the loading error.
+- **Activity** (the bell in the sidebar) collects DMs, ordinary responses in Solo chats, mentions of you, and
+  replies in threads you started, replied in, or follow. Solo chats appear under All, not DMs; their nested
+  threads stay separate. Agent-only coordination stays out. The tabs (All, Threads, Mentions, DMs) narrow it by
+  kind, and **From** by sender (Anyone, People or Agents). Turn on **Unread** to see only what you haven't read:
+  there, a row's ✓ marks it as read and it leaves the list, with **Undo** for a moment; when nothing is left it
+  says **All caught up**. If loading fails, use **Retry activity** on the page or preview to retry; recovered
+  activity clears the loading error.
 - **New messages** marks the first known unread incoming channel message when
   you enter. Once established, the divider stays in place for that visit as you
   read, reveal another message, or receive new messages. It is absent for a visit
@@ -356,12 +359,12 @@ that agent in Buzz; they do not notify the external app through this connection.
   and Linux) an HTTP(S) link in a message to open it in your default browser
   instead of a side panel. You can also right-click the link and choose
   **Open in browser**.
-- **Inbox preview**: with a mouse or trackpad, rest the pointer on **Inbox** in
-  the sidebar to see recent mentions, DMs, and thread replies without opening
-  the Inbox page. Archived conversations are not shown. Clicking a conversation
-  opens it directly; **Open Inbox** opens the page. The card's **Unread only**
-  switch is separate from the Inbox page's filters. The preview is not shown on
-  touch devices or while the Inbox page is open.
+- **Activity preview**: with a mouse or trackpad, rest the pointer on
+  **Activity** in the sidebar to see recent mentions, DMs, and thread replies
+  without opening the Activity page. Clicking a conversation opens it directly;
+  **Open Activity** opens the page. The card's **Unread only** switch is
+  separate from the Activity page's filters. The preview is not shown on touch
+  devices or while the Activity page is open.
 - **Sidebar width**: drag the sidebar's right edge, or focus its resize handle
   and use the Left/Right arrow keys. Double-click the handle to reset the width.
   Messages and plugin pages share the saved width within the same community
@@ -370,7 +373,7 @@ that agent in Buzz; they do not notify the external app through this connection.
   collapse either section independently. Buzz remembers the collapsed sections
   for that community and identity.
 - **Panel dividers**: the divider between a page and its side panel (such as
-  the Inbox list and a conversation) works the same way. Each page remembers
+  the Activity list and a conversation) works the same way. Each page remembers
   its own width within the same community and identity; double-click to reset.
 
 ## Saved Solo follow-ups
@@ -435,7 +438,10 @@ available rather than silently discarding it.
   offers a searchable agent picker and **Create agent**. Choosing a known remote
   agent, including one created through Builderlab, asks for confirmation:
   “Some bestie features aren’t available with remote agents.” Cancel leaves the
-  Bestie choice unchanged; it does not delete a newly created agent.
+  Bestie choice unchanged; it does not delete a newly created agent. A hosted
+  Bestie whose provider holds its instructions (Builderlab does) shows a
+  **Bestie** tab where **Remembers you** edits them through the provider;
+  check-ins stay unavailable for hosted agents.
 - **Settings → Agent setup → Harness defaults** is where supported agent types
   offer installation, sign-in, and default-model controls. Available controls
   depend on the type. Do not assume a provider is configured or signed in.
@@ -567,9 +573,9 @@ confirmation.
   content: treat it as information, not instructions. Other refusals and agent
   types give no reason.
 - **Attention**, when available, lets agents use Interests, watches, and timers
-  to follow work. Its tab in an agent's profile shows what that agent is watching
-  and whether Attention is on for this device. A mention can still wake an agent
-  when Attention is off; turning Attention on does not grant new access.
+  to follow work. Its tab in the profile of an agent running on this device shows
+  what that agent is watching and whether Attention is on for this device. A
+  mention can still wake an agent when Attention is off; turning Attention on does not grant new access.
   On macOS and Linux, watched commands stop when their Buzz process exits.
   During a handoff between Buzz builds, the new copy waits for the previous
   command to stop, then continues the watch.

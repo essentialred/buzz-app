@@ -396,7 +396,7 @@ and the owner's other comments wake the agent. A watch is saved in Attention on 
 pull request merges or closes, after 20 wakes, after 30 minutes without a
 successful read, or when the agent calls it with `stop: true`.
 
-Settings → Plugins → GitHub comment authors decides whose feedback wakes agents,
+Settings → Plugins → GitHub decides whose feedback wakes agents,
 since anyone can comment on a public pull request. It holds rules, one per
 line, saved on the device. Each starts with `allow` or `deny`, followed by any
 of these conditions, all of which must hold:
@@ -492,7 +492,8 @@ thread-scoped sessions take only notes addressed to their root. Notes are
 consumed once when the harness is ready to deliver the turn, and restored to
 the same conversation ahead of newer notes if delivery definitely never began.
 They remain in memory only, and the call returns false unless this copy runs
-the agent.
+the agent. Pi agents don't take notes yet: the call still returns true for one,
+but its turns never include the note.
 
 A type marks its primary configuration tab with `role: "settings"`. In the
 Agents build view and profile panel, the host keeps that tab at a stable
@@ -1208,8 +1209,10 @@ not joined here; the transcript shows the agent's ACP output.
 
 The shared Claude, Goose, and Pi turn formatter sends conversation history and
 the triggering event as exact JSON records with escaped markup delimiters, the
-same records Codex sends. Message text and tags therefore cannot create extra
-request sections. The transcript reads those records directly and retains
+same records Codex sends. Beside the author's `pubkey`, each record carries
+their verified `username` when the community verified one, which the agent
+writes after `@` to tag them, and their `display_name`. Message text, names
+and tags therefore cannot create extra request sections. The transcript reads those records directly and retains
 support for the earlier single-object JSON event and older line-based
 `buzz-event` and `buzz-events` records; it never parses decoded message content
 as another prompt.
