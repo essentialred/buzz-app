@@ -1,8 +1,8 @@
 import { expect, it, vi } from "vitest";
 import { nip19 } from "nostr-tools";
 import { createRelaySession } from "../relay/session";
-import { keypair, profile } from "../relay/testing";
-import type { ReadFilter } from "../relay/events";
+import { keypair, profile, signed } from "../relay/testing";
+import { eventDto, type ReadFilter } from "../relay/events";
 import { searchMembers, MEMBER_SEARCH_PAGE_SIZE } from "./search";
 
 it("uses the server prefix-search page, distinguishes namesakes, ranks exact names, and reports another page", async () => {
@@ -83,6 +83,94 @@ it("propagates a failed search instead of displaying no matches", async () => {
     await expect(
       searchMembers(owner.session, "Morgan", 1, new AbortController().signal),
     ).rejects.toThrow("Offline");
+  } finally {
+    owner.dispose();
+  }
+});
+
+// A relay-signed directory name for someone who never saved a profile.
+const verifiedHead = (author: ReturnType<typeof keypair>, subject: string) =>
+  eventDto(
+    signed(author, {
+      kind: 30382,
+      content: "",
+      tags: [
+        ["d", subject],
+        ["p", subject],
+        ["active", "true"],
+        ["display_name", "brittneyg"],
+        ["username", "brittneyg"],
+        ["issuer_label", "Example"],
+        ["verified_at", "1"],
+      ],
+    }),
+  );
+it("finds a person with no profile by their relay-signed name, never a forged one", async () => {
+  const viewer = keypair(),
+    relay = keypair(),
+    stranger = keypair(),
+    brittney = keypair(),
+    impostor = keypair();
+  const owner = createRelaySession({
+    viewer: viewer.pubkey,
+    relayAuthor: relay.pubkey,
+    media: () => undefined,
+    query: async () => [],
+    searchProfiles: async () => [
+      verifiedHead(relay, brittney.pubkey),
+      verifiedHead(stranger, impostor.pubkey),
+    ],
+    verifiedProfiles: {
+      pubkey: relay.pubkey,
+      multipleIssuers: false,
+      searchable: true,
+    },
+  });
+  try {
+    const result = await searchMembers(
+      owner.session,
+      "brittneyg",
+      1,
+      new AbortController().signal,
+    );
+    expect(result.people).toEqual([
+      expect.objectContaining({ pubkey: brittney.pubkey, name: "brittneyg" }),
+    ]);
+  } finally {
+    owner.dispose();
+  }
+});
+it("resolves the npub of a person with no profile by their relay-signed name", async () => {
+  const viewer = keypair(),
+    relay = keypair(),
+    brittney = keypair();
+  const query = vi.fn(async (_filters: readonly ReadFilter[]) => [
+    verifiedHead(relay, brittney.pubkey),
+  ]);
+  const owner = createRelaySession({
+    viewer: viewer.pubkey,
+    relayAuthor: relay.pubkey,
+    media: () => undefined,
+    query,
+    verifiedProfiles: { pubkey: relay.pubkey, multipleIssuers: false },
+  });
+  try {
+    const result = await searchMembers(
+      owner.session,
+      nip19.npubEncode(brittney.pubkey),
+      1,
+      new AbortController().signal,
+    );
+    expect(query.mock.calls[0]?.[0]).toContainEqual(
+      expect.objectContaining({
+        kinds: [30382],
+        authors: [relay.pubkey],
+        "#d": [brittney.pubkey],
+      }),
+    );
+    expect(result.people).toEqual([
+      expect.objectContaining({ pubkey: brittney.pubkey, name: "brittneyg" }),
+    ]);
   } finally {
     owner.dispose();
   }

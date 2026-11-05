@@ -29,3 +29,27 @@ it("keeps a verified person when a refined query matches only their verified ful
   expect(people).toHaveBeenCalledOnce();
   expect(refined.people).toEqual([fake]);
 });
+
+it("keeps a person with no profile when a refined query matches their verified username", async () => {
+  // Found by their relay-signed head alone, named by it.
+  const unprofiled = {
+    pubkey: "a".repeat(64),
+    name: "Brittney G",
+    username: "brittneyg",
+    verified: { displayName: "Brittney G", username: "brittneyg" },
+  };
+  const other = { pubkey: "b".repeat(64), name: "Britt" };
+  const people = vi.fn(async () => ({
+    people: [unprofiled, other],
+    hasMore: false,
+  }));
+  const session = {
+    directMessages: { people },
+    profiles: { snapshot: () => new Map() },
+  } as unknown as ComposerSession;
+  const signal = new AbortController().signal;
+  await fetchMentionDirectoryPage(session, "britt", signal);
+  const refined = await fetchMentionDirectoryPage(session, "brittneyg", signal);
+  expect(people).toHaveBeenCalledOnce();
+  expect(refined.people).toEqual([unprofiled]);
+});

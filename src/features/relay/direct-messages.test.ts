@@ -547,6 +547,72 @@ describe("verified names for a search page", () => {
     },
   );
 
+  it("finds people with no profile by a relay-signed name, by search or key, never a forged one", async () => {
+    const viewer = keypair(),
+      relay = keypair(),
+      stranger = keypair(),
+      brittney = keypair(),
+      impostor = keypair(),
+      plain = keypair();
+    const head = assertion(relay, brittney.pubkey, {
+      display: "brittneyg",
+      full: "Brittney Example",
+    });
+    const query = vi.fn(async (_filters: readonly ReadFilter[]) => [
+      eventDto(head),
+    ]);
+    const owner = createRelaySession({
+      viewer: viewer.pubkey,
+      relayAuthor: relay.pubkey,
+      media: () => undefined,
+      query,
+      searchProfiles: async () =>
+        [
+          head,
+          assertion(stranger, impostor.pubkey, { display: "brittneyx" }),
+          profile(plain, { name: "Brittany" }),
+        ].map((event) => eventDto(event)),
+      verifiedProfiles: {
+        pubkey: relay.pubkey,
+        multipleIssuers: false,
+        searchable: true,
+      },
+    });
+    try {
+      const signal = new AbortController().signal;
+      const searched = await owner.session.directMessages.people(
+        "brit",
+        1,
+        signal,
+      );
+      expect(searched.people).toEqual([
+        expect.objectContaining({
+          pubkey: brittney.pubkey,
+          name: "brittneyg",
+          verified: expect.objectContaining({ fullName: "Brittney Example" }),
+        }),
+        expect.objectContaining({ pubkey: plain.pubkey, name: "Brittany" }),
+      ]);
+      const byKey = await owner.session.directMessages.people(
+        brittney.pubkey,
+        1,
+        signal,
+      );
+      expect(query.mock.calls[0]?.[0]).toContainEqual(
+        expect.objectContaining({
+          kinds: [30382],
+          authors: [relay.pubkey],
+          "#d": [brittney.pubkey],
+        }),
+      );
+      expect(byKey.people).toEqual([
+        expect.objectContaining({ pubkey: brittney.pubkey, name: "brittneyg" }),
+      ]);
+    } finally {
+      owner.dispose();
+    }
+  });
+
   const changes: [string, () => VerifiedProfileAuthority | undefined][] = [
     ["withdrawn", () => undefined],
     ["rotated", () => ({ pubkey: keypair().pubkey, multipleIssuers: false })],

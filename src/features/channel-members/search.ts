@@ -1,6 +1,7 @@
 import { nip19 } from "nostr-tools";
 import type { RelaySession } from "../relay/session";
-import { foldProfiles } from "../relay/profiles";
+import { searchedProfiles } from "../relay/profile-search";
+import { verifiedProfileFilter } from "../relay/verified-profile";
 import { matchPerson } from "../search/person-match";
 
 export const MEMBER_SEARCH_PAGE_SIZE = 30;
@@ -24,9 +25,16 @@ export async function searchMembers(
       // An incomplete public key remains an ordinary query while typing.
     }
   }
+  const authority = session.profiles.verifiedAuthority?.();
   const events = exact
     ? await session.read(
-        [{ kinds: [0], authors: [exact], limit: MEMBER_SEARCH_PAGE_SIZE }],
+        [
+          { kinds: [0], authors: [exact], limit: MEMBER_SEARCH_PAGE_SIZE },
+          // A person with no kind:0 is found by their verified head.
+          ...(authority
+            ? [verifiedProfileFilter(authority.pubkey, [exact])]
+            : []),
+        ],
         { signal },
       )
     : await session.searchProfiles(text, {
@@ -35,11 +43,10 @@ export async function searchMembers(
         signal,
       });
   signal.throwIfAborted();
-  const profiles = foldProfiles(
-    events.filter(
-      (event) => event.kind === 0 && (!exact || event.pubkey === exact),
-    ),
-  );
+  const profiles = searchedProfiles(events, authority);
+  if (exact)
+    for (const pubkey of profiles.keys())
+      if (pubkey !== exact) profiles.delete(pubkey);
   // Rank the relay's page by the shared name rule.
   const score = (name: string) => matchPerson(name, text)?.tier ?? 4;
   return {

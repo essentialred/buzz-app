@@ -1,10 +1,9 @@
 import { validDirectMessageParticipants } from "./direct-message-policy";
-import { foldProfiles } from "./profiles";
 import type { ChannelQueries } from "./contracts";
 import type { ReadTransport } from "./transport";
 import type { RelayReader } from "./reader";
 import type { Outbox } from "./outbox";
-import type { ProfileSearch } from "./profile-search";
+import { searchedProfiles, type ProfileSearch } from "./profile-search";
 import type { ProfileQueries } from "./profile-directory";
 import { newer, type RelayEvent } from "./events";
 import {
@@ -58,6 +57,7 @@ export function createDirectMessages(
       const limit = browsing && page === 1 ? 15 : 30;
       const relayPage = browsing && page > 1 ? page - 1 : page;
       const priority = page === 1 ? "foreground" : "background";
+      const authority = verifiedAuthority();
       const events =
         value && !exactKey
           ? await searchProfiles(
@@ -73,21 +73,32 @@ export function createDirectMessages(
                   page: relayPage,
                   ...(exactKey ? { authors: [value] } : {}),
                 },
+                // A person with no kind:0 is found by their verified head.
+                ...(exactKey && authority
+                  ? [verifiedProfileFilter(authority.pubkey, [value])]
+                  : []),
               ],
               { signal: active, priority },
             );
       active.throwIfAborted();
       return {
-        people: [...foldProfiles(events)]
-          .filter(([pubkey]) => pubkey !== transport?.viewer)
+        people: [...searchedProfiles(events, authority)]
+          .filter(
+            ([pubkey]) =>
+              pubkey !== transport?.viewer && (!exactKey || pubkey === value),
+          )
           .map(
-            ([pubkey, { name, username, picture, isAgent, ownerPubkey }]) => ({
+            ([
+              pubkey,
+              { name, username, picture, isAgent, ownerPubkey, verified },
+            ]) => ({
               pubkey,
               name,
               ...(username ? { username } : {}),
               ...(picture ? { picture } : {}),
               ...(isAgent ? { isAgent } : {}),
               ...(ownerPubkey ? { ownerPubkey } : {}),
+              ...(verified ? { verified } : {}),
             }),
           ),
         hasMore: events.length >= limit,

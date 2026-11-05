@@ -1,8 +1,11 @@
 import { PROFILE_CACHE_BASE } from "./budget";
+import type { Profile } from "./contracts";
 import { ReadError } from "./errors";
-import { newer, type RelayEvent } from "./events";
+import { newer, type EventData, type RelayEvent } from "./events";
+import { foldProfiles } from "./profiles";
 import type { RelayReader } from "./reader";
 import {
+  verifiedProfile,
   verifiedProfileSubject,
   type VerifiedProfileAuthority,
 } from "./verified-profile";
@@ -44,9 +47,12 @@ export const PROFILE_SEARCH_HEADS_MS = 30_000;
  * Both searches go through the given reader, which owns their deadline,
  * cancellation and stale-result checks.
  *
- * Where the authority is `searchable`, the endpoint also returns each found
- * person's current verified head, and none when they have none. Those
- * answers are kept, a page at a time, for {@link verifiedHeads}. */
+ * Where the community has a verified-profile authority, the endpoint also
+ * finds people by their verified names and returns each found person's
+ * current verified head. A person with no kind:0 is returned as that head, so
+ * a page holds one event per person; {@link searchedProfiles} names them.
+ * Where the authority is `searchable`, a missing head means there is none, and
+ * the answers are kept, a page at a time, for {@link verifiedHeads}. */
 export function createProfileSearch(
   fallback: RelayReader,
   now: () => number = Date.now,
@@ -129,7 +135,7 @@ export function createProfileSearch(
           fresh: true,
         });
         keep(events);
-        return events.filter((event) => event.kind === 0);
+        return people(events, authority());
       } catch (error) {
         if (
           !(error instanceof ReadError) ||
@@ -155,3 +161,56 @@ export function createProfileSearch(
   return Object.assign(searchProfiles, { verifiedHeads });
 }
 export type ProfileSearch = ReturnType<typeof createProfileSearch>;
+
+/** One event per person: their kind:0, or else their newest head signed by
+ * `authority`. Heads from any other key are dropped. */
+function people<T extends EventData>(
+  events: readonly T[],
+  authority: VerifiedProfileAuthority | undefined,
+): readonly T[] {
+  const profiled = new Set(
+    events.filter((event) => event.kind === 0).map((event) => event.pubkey),
+  );
+  const heads = new Map<string, T>();
+  if (authority)
+    for (const event of events) {
+      const subject = verifiedProfileSubject(event, authority);
+      if (subject && !profiled.has(subject))
+        heads.set(subject, newer(heads.get(subject), event));
+    }
+  const chosen = new Set(heads.values());
+  return events.filter((event) => event.kind === 0 || chosen.has(event));
+}
+
+/** The people a profile search or key lookup found, in its order. A person
+ * with no kind:0 is named by their newest head, when it is signed by
+ * `authority` and valid; any other head is ignored. Their verified username
+ * stands in for a handle, so pickers match it as the relay did. */
+export function searchedProfiles(
+  events: readonly EventData[],
+  authority: VerifiedProfileAuthority | undefined,
+): Map<string, Profile> {
+  const folded = foldProfiles(events);
+  const profiles = new Map<string, Profile>();
+  for (const event of people(events, authority)) {
+    if (event.kind === 0) {
+      const profile = folded.get(event.pubkey);
+      if (profile) profiles.set(event.pubkey, profile);
+      continue;
+    }
+    const subject = authority && verifiedProfileSubject(event, authority);
+    const verified = authority && verifiedProfile(event, authority, true);
+    if (subject && verified)
+      profiles.set(
+        subject,
+        Object.freeze({
+          name: verified.displayName,
+          ...(verified.username !== verified.displayName
+            ? { username: verified.username }
+            : {}),
+          verified,
+        }),
+      );
+  }
+  return profiles;
+}

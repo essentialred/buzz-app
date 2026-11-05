@@ -1864,6 +1864,29 @@ it.each([
   },
 );
 
+it("finds a person with no profile by any verified name the directory found them by", async () => {
+  const t = setup();
+  // The directory names them by their relay-signed head.
+  const unprofiled = {
+    pubkey: aleksandr.pubkey,
+    name: petrov.displayName,
+    verified: petrov,
+  };
+  t.directMessages.people.mockImplementation(async (query, page) => ({
+    people: query.trim() ? [unprofiled] : [],
+    // Browsing lists profiles only, so it never completes the directory.
+    hasMore: !query.trim() && page === 1,
+  }));
+  verifying(t, new Map([[aleksandr.pubkey, petrov]]));
+  t.mount();
+  await waitFor(() => expect(recipient()).toBeEnabled());
+  for (const text of ["petrov", "aleksandr"]) {
+    await t.user.clear(recipient());
+    await t.user.type(recipient(), text);
+    expect(await screen.findByRole("option", petrovRow)).toBeVisible();
+  }
+});
+
 it("relabels a recipient whose verification answers late, keeping a failed send's error", async () => {
   const t = setup();
   t.directMessages.people.mockResolvedValue({

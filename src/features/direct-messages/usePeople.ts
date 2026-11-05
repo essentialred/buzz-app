@@ -40,7 +40,10 @@ function matching(people: Recipient[], query: string) {
   const key = query.trim().toLowerCase();
   return people.filter(
     (person) =>
-      matchPerson(person.name, query) !== undefined ||
+      // A person with no profile was found by any of their verified names.
+      [person.name, person.verified?.username, person.verified?.fullName].some(
+        (name) => name !== undefined && matchPerson(name, query) !== undefined,
+      ) ||
       (/^[0-9a-f]{64}$/.test(key) && person.pubkey === key),
   );
 }

@@ -6,6 +6,7 @@ import {
   PROFILE_SEARCH_HEADS_MS,
   PROFILE_SEARCH_QUERY_MAX,
   PROFILE_SEARCH_RETRY_MS,
+  searchedProfiles,
 } from "./profile-search";
 import type { VerifiedProfileAuthority } from "./verified-profile";
 import type { ReadOptions } from "./reader";
@@ -283,5 +284,98 @@ describe("verified heads from a searchable relay", () => {
     expect(t.searchProfiles.verifiedHeads([fake.pubkey], searchable).size).toBe(
       0,
     );
+  });
+});
+
+describe("people found only by a verified name", () => {
+  const relay = keypair(),
+    stranger = keypair(),
+    unprofiled = keypair(),
+    plain = keypair();
+  const authority: VerifiedProfileAuthority = {
+    pubkey: relay.pubkey,
+    multipleIssuers: false,
+    searchable: true,
+  };
+  const head = (
+    author: ReturnType<typeof keypair>,
+    display: string,
+    created_at = 1_000,
+  ) =>
+    eventDto(
+      signed(author, {
+        kind: 30382,
+        created_at,
+        content: "",
+        tags: [
+          ["d", unprofiled.pubkey],
+          ["p", unprofiled.pubkey],
+          ["active", "true"],
+          ["display_name", display],
+          ["username", "brittneyg"],
+          ["issuer_label", "Example"],
+          ["verified_at", "1"],
+        ],
+      }),
+    );
+  const older = head(relay, "brittney old", 500);
+  const current = head(relay, "Brittney G");
+  // A newer head for the same person from any other key is forged.
+  const forged = head(stranger, "Mallory", 2_000);
+  const plainProfile = signed(plain, {
+    kind: 0,
+    content: JSON.stringify({ name: "Brittany Plain" }),
+    tags: [],
+  });
+  function search(authorityNow: VerifiedProfileAuthority | undefined) {
+    return createProfileSearch(
+      {
+        read: vi.fn(async () => [nip50]),
+        searchProfiles: async () => [older, forged, current, plainProfile],
+      },
+      () => 1_000_000,
+      () => authorityNow,
+    );
+  }
+
+  it("returns one event per person: a profile, or else the newest relay head", async () => {
+    expect(
+      await search(authority)("brit", { limit: 30, signal: signal() }),
+    ).toEqual([current, plainProfile]);
+    // Without an authority no head is trusted.
+    expect(
+      await search(undefined)("brit", { limit: 30, signal: signal() }),
+    ).toEqual([plainProfile]);
+  });
+
+  it("names a person with no profile by their relay-signed head only", () => {
+    const found = searchedProfiles([forged, current, plainProfile], authority);
+    expect([...found.keys()]).toEqual([unprofiled.pubkey, plain.pubkey]);
+    expect(found.get(unprofiled.pubkey)).toMatchObject({
+      name: "Brittney G",
+      username: "brittneyg",
+      verified: { displayName: "Brittney G", username: "brittneyg" },
+    });
+    // A forged head alone names no one, nor does a copy whose signature was
+    // never checked, nor a head under another authority.
+    expect(searchedProfiles([forged], authority).size).toBe(0);
+    expect(searchedProfiles([{ ...current }], authority).size).toBe(0);
+    expect(
+      searchedProfiles([current], {
+        pubkey: stranger.pubkey,
+        multipleIssuers: false,
+      }).size,
+    ).toBe(0);
+  });
+
+  it("keeps a person\x27s own profile over their head", () => {
+    const own = signed(unprofiled, {
+      kind: 0,
+      content: JSON.stringify({ name: "Brit" }),
+      tags: [],
+    });
+    expect(
+      searchedProfiles([current, own], authority).get(unprofiled.pubkey),
+    ).toMatchObject({ name: "Brit" });
   });
 });

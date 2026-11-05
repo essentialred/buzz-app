@@ -1,5 +1,5 @@
 import { PROFILE_CACHE_MAX } from "./budget.ts";
-import { hasEventProof, type RelayEvent } from "./events.ts";
+import { hasEventProof, type EventData, type RelayEvent } from "./events.ts";
 
 export const VERIFIED_PROFILE_KIND = 30382;
 export const VERIFIED_PROFILE_BATCH = 128;
@@ -79,7 +79,7 @@ export function validVerifiedName(value: string): boolean {
 
 /** A signed newer malformed assertion invalidates the old name at its address. */
 export function verifiedProfileSubject(
-  event: RelayEvent,
+  event: EventData,
   authority: VerifiedProfileAuthority,
 ): string | undefined {
   if (
@@ -97,7 +97,7 @@ export function verifiedProfileSubject(
 
 /** Strict output-only projection. Kind 0 and NIP-05 never establish verification. */
 export function verifiedProfile(
-  event: RelayEvent,
+  event: EventData,
   authority: VerifiedProfileAuthority,
   checked: boolean,
 ): VerifiedProfile | undefined {

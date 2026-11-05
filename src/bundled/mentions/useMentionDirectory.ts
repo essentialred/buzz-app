@@ -63,14 +63,18 @@ function prefixPage(session: ComposerSession, query: string) {
   return best?.[1];
 }
 /** The page for `query` read out of a complete page for its prefix. A person
- * the community verified also matches by their verified names, so refining
- * `fake` to `fake n` keeps Fake Name. */
+ * the community verified also matches by their verified names, as the relay
+ * found them, so refining `fake` to `fake n` keeps Fake Name. */
 const derive = (session: ComposerSession, page: Page, query: string): Page => ({
   people: page.people.filter((person) => {
-    const verified = verifiedName(session.profiles, person.pubkey);
-    return [person.name, verified?.displayName, verified?.fullName].some(
-      (name) => name !== undefined && matchPerson(name, query),
-    );
+    const verified =
+      verifiedName(session.profiles, person.pubkey) ?? person.verified;
+    return [
+      person.name,
+      verified?.displayName,
+      verified?.username,
+      verified?.fullName,
+    ].some((name) => name !== undefined && matchPerson(name, query));
   }),
   more: false,
 });
